@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni (Identity Flow) - Мгновенное управление изолированными сессиями</title>
+    <meta name="description" content="Мощный менеджер аккаунтов для быстрой и безопасной смены профилей на веб-сайтах и в десктопных программах">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #121214;
+            color: #e4e4e7;
+            overflow-x: hidden;
+        }
+        
+        /* Neon Glow Effect */
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(0, 173, 181, 0.4),
+                        0 0 40px rgba(0, 173, 181, 0.2);
+        }
+        
+        .neon-glow-hover:hover {
+            box-shadow: 0 0 30px rgba(0, 173, 181, 0.6),
+                        0 0 60px rgba(0, 173, 181, 0.3);
+        }
+        
+        .neon-border {
+            border: 1px solid rgba(0, 173, 181, 0.5);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 173, 181, 0.8),
+                         0 0 20px rgba(0, 173, 181, 0.5);
+        }
+        
+        /* Gradient Background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #121214 0%, #1A1A1E 100%);
+        }
+        
+        /* Backdrop Blur */
+        .glass {
+            background: rgba(26, 26, 30, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(0, 173, 181, 0.4),
+                            0 0 40px rgba(0, 173, 181, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(0, 173, 181, 0.6),
+                            0 0 60px rgba(0, 173, 181, 0.4);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .pulse-glow {
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+        
+        /* Slider Styles */
+        .slider-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+        
+        .slider-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        
+        .slider-slide {
+            min-width: 100%;
+            flex-shrink: 0;
+        }
+        
+        .slider-slide img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .slider-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 173, 181, 0.3);
+            border: 1px solid rgba(0, 173, 181, 0.6);
+            color: #00ADB5;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .slider-arrow:hover {
+            background: rgba(0, 173, 181, 0.5);
+            box-shadow: 0 0 20px rgba(0, 173, 181, 0.6);
+        }
+        
+        .slider-arrow.prev {
+            left: 10px;
+        }
+        
+        .slider-arrow.next {
+            right: 10px;
+        }
+        
+        .slider-dots {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        .slider-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(228, 228, 231, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .slider-dot.active {
+            background: #00ADB5;
+            box-shadow: 0 0 10px rgba(0, 173, 181, 0.8);
+        }
+        
+        /* Mobile Menu */
+        .mobile-menu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .mobile-menu.active {
+            max-height: 400px;
+        }
+        
+        /* Card Hover Effect */
+        .feature-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 173, 181, 0.3);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 173, 181, 0.6);
+            box-shadow: 0 10px 30px rgba(0, 173, 181, 0.2);
+        }
+        
+        /* Scroll Reveal */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Logo Animation */
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            position: relative;
+        }
+        
+        .logo-lines {
+            stroke: #00ADB5;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+        }
+        
+        /* Button Styles */
+        .btn-primary {
+            background: #00ADB5;
+            color: #121214;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 173, 181, 0.6),
+                        0 0 60px rgba(0, 173, 181, 0.3);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: #00ADB5;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid #00ADB5;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(0, 173, 181, 0.1);
+            transform: scale(1.05);
+        }
+        
+        /* Tab Styles */
+        .tab-button {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid rgba(0, 173, 181, 0.3);
+            color: #e4e4e7;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+        
+        .tab-button:hover {
+            border-color: rgba(0, 173, 181, 0.6);
+        }
+        
+        .tab-button.active {
+            background: rgba(0, 173, 181, 0.2);
+            border-color: #00ADB5;
+            color: #00ADB5;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+    </style>
+</head>
+<body class="gradient-bg">
+
+    <!-- Header -->
+    <header class="glass sticky top-0 z-50 border-b border-gray-800">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <svg class="logo-icon" viewBox="0 0 40 40">
+                        <path class="logo-lines" d="M 10 10 Q 20 5, 30 10 T 30 30 Q 20 35, 10 30 T 10 10" />
+                        <path class="logo-lines" d="M 15 15 L 25 25 M 25 15 L 15 25" />
+                        <circle class="logo-lines" cx="20" cy="20" r="3" fill="#00ADB5"/>
+                    </svg>
+                    <span class="text-xl font-bold neon-text">Omni</span>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-gray-300 hover:text-[#00ADB5] transition">Возможности</a>
+                    <a href="#screenshots" class="text-gray-300 hover:text-[#00ADB5] transition">Скриншоты</a>
+                    <a href="#tech" class="text-gray-300 hover:text-[#00ADB5] transition">Технологии</a>
+                    <a href="#security" class="text-gray-300 hover:text-[#00ADB5] transition">Безопасность</a>
+                    <a href="#download" class="text-gray-300 hover:text-[#00ADB5] transition">Скачать</a>
+                </nav>
+                
+                <!-- CTA Button -->
+                <div class="hidden md:block">
+                    <a href="#repo" class="btn-secondary">
+                        <i data-lucide="github" class="w-5 h-5"></i>
+                        Репозиторий проекта
+                    </a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="md:hidden text-[#00ADB5]">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="mobile-menu md:hidden">
+                <nav class="flex flex-col gap-4 py-4">
+                    <a href="#features" class="text-gray-300 hover:text-[#00ADB5] transition">Возможности</a>
+                    <a href="#screenshots" class="text-gray-300 hover:text-[#00ADB5] transition">Скриншоты</a>
+                    <a href="#tech" class="text-gray-300 hover:text-[#00ADB5] transition">Технологии</a>
+                    <a href="#security" class="text-gray-300 hover:text-[#00ADB5] transition">Безопасность</a>
+                    <a href="#download" class="text-gray-300 hover:text-[#00ADB5] transition">Скачать</a>
+                    <a href="#repo" class="btn-secondary w-full justify-center">
+                        <i data-lucide="github" class="w-5 h-5"></i>
+                        Репозиторий
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero" class="py-20 md:py-32 relative overflow-hidden">
+        <!-- Background Effects -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00ADB5] opacity-10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00ADB5] opacity-10 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div class="container mx-auto px-4 relative z-10">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <!-- Left Column: Text & CTAs -->
+                <div class="space-y-8 fade-in-up">
+                    <div class="inline-block px-4 py-2 bg-[#00ADB5] bg-opacity-10 border border-[#00ADB5] border-opacity-30 rounded-full">
+                        <span class="text-[#00ADB5] text-sm font-semibold">🚀 Новое поколение управления аккаунтами</span>
+                    </div>
+                    
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+                        Omni: <span class="neon-text">Мгновенное управление</span> изолированными сессиями в один клик
+                    </h1>
+                    
+                    <p class="text-lg md:text-xl text-gray-400 leading-relaxed">
+                        Универсальный оркестратор для Windows. Быстро переключайтесь между десятками аккаунтов на сайтах и в десктопных приложениях без риска блокировок.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="#download" class="btn-primary neon-glow-hover">
+                            <i data-lucide="download" class="w-5 h-5"></i>
+                            Скачать для Windows (64-bit)
+                        </a>
+                        <a href="#docs" class="btn-secondary">
+                            <i data-lucide="book-open" class="w-5 h-5"></i>
+                            Смотреть документацию
+                        </a>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-6 pt-8">
+                        <div>
+                            <div class="text-3xl font-bold text-[#00ADB5]">256-bit</div>
+                            <div class="text-sm text-gray-500">AES Шифрование</div>
+                        </div>
+                        <div>
+                            <div class="text-3xl font-bold text-[#00ADB5]">∞</div>
+                            <div class="text-sm text-gray-500">Аккаунтов</div>
+                        </div>
+                        <div>
+                            <div class="text-3xl font-bold text-[#00ADB5]">1 клик</div>
+                            <div class="text-sm text-gray-500">Переключение</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Interactive Screenshot Slider -->
+                <div class="fade-in-up" style="animation-delay: 0.2s">
+                    <div class="slider-container neon-border neon-glow pulse-glow rounded-xl overflow-hidden">
+                        <div class="slider-track" id="slider-track">
+                            <!-- Slide 1 - Замените src на путь к скриншоту главного окна приложения -->
+                            <div class="slider-slide">
+                                <img src="screenshot/main.png" alt="Главное окно Omni - Список профилей" />
+                            </div>
+                            <!-- Slide 2 - Замените src на путь к скриншоту окна ввода ПИН-кода -->
+                            <div class="slider-slide">
+                                <img src="screenshot/pin-code.png" alt="Окно ввода мастер-пароля" />
+                            </div>
+                            <!-- Slide 3 - Замените src на путь к скриншоту настроек прокси -->
+                            <div class="slider-slide">
+                                <img src="screenshot/settings.png" alt="Настройки прокси и изоляции" />
+                            </div>
+                            <!-- Slide 4 - Замените src на путь к скриншоту статистики/аналитики -->
+                            <div class="slider-slide">
+                                <img src="screenshot/statistic.png" alt="Статистика использования профилей" />
+                            </div>
+                        </div>
+                        
+                        <!-- Navigation Arrows -->
+                        <div class="slider-arrow prev" id="slider-prev">
+                            <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                        </div>
+                        <div class="slider-arrow next" id="slider-next">
+                            <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                        </div>
+                        
+                        <!-- Dots Indicator -->
+                        <div class="slider-dots" id="slider-dots"></div>
+                    </div>
+                    
+                    <p class="text-center text-sm text-gray-500 mt-4">
+                        <i data-lucide="info" class="w-4 h-4 inline"></i>
+                        Интерфейс приложения Omni на .NET 8 WPF
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pain Points Section -->
+    <section id="problems" class="py-20 bg-[#1A1A1E]">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                    Почему вам нужен <span class="neon-text">Omni</span>
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                    Решаем критические проблемы управления множественными аккаунтами
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="feature-card glass p-8 rounded-xl reveal">
+                    <div class="w-14 h-14 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-6">
+                        <i data-lucide="shield-check" class="w-8 h-8 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Защита от банов</h3>
+                    <p class="text-gray-400">
+                        Привязка индивидуальных прокси к каждому профилю предотвращает пересечение IP-адресов и исключает риск массовых блокировок аккаунтов.
+                    </p>
+                </div>
+                
+                <!-- Card 2 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.1s">
+                    <div class="w-14 h-14 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-6">
+                        <i data-lucide="layers" class="w-8 h-8 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Полная изоляция</h3>
+                    <p class="text-gray-400">
+                        Изолированные Chromium-контейнеры для веб-ресурсов исключают смешивание cookies, кэша и истории между профилями.
+                    </p>
+                </div>
+                
+                <!-- Card 3 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.2s">
+                    <div class="w-14 h-14 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-6">
+                        <i data-lucide="zap" class="w-8 h-8 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">Мгновенное переключение</h3>
+                    <p class="text-gray-400">
+                        Забудьте про ручной ввод паролей и бесконечные перезапуски программ — переключение между профилями происходит в 1 клик.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid Section -->
+    <section id="features" class="py-20">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                    Киллер-фичи <span class="neon-text">Omni</span>
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                    Технологичное решение для профессионалов
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="feature-card glass p-8 rounded-xl reveal">
+                    <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-4">
+                        <i data-lucide="cpu" class="w-6 h-6 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3">Гибридный движок</h3>
+                    <p class="text-gray-400 text-sm">
+                        Родная поддержка сайтов через встроенный WebView2 Edge и автономных программ Windows через автоматическую подмену конфигураций в AppData.
+                    </p>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.05s">
+                    <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-4">
+                        <i data-lucide="lock" class="w-6 h-6 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3">Безопасность AES-256</h3>
+                    <p class="text-gray-400 text-sm">
+                        Локальное шифрование базы данных аккаунтов SQLite по военному стандарту. Доступ строго по мастер-паролю.
+                    </p>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.1s">
+                    <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-4">
+                        <i data-lucide="sparkles" class="w-6 h-6 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3">Умная автоматизация</h3>
+                    <p class="text-gray-400 text-sm">
+                        Трекер статистики использования в реальном времени, ведение индивидуальных заметок для каждого аккаунта и автоматическое подтягивание фавиконок сайтов.
+                    </p>
+                </div>
+                
+                <!-- Feature 4 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.15s">
+                    <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-4">
+                        <i data-lucide="settings" class="w-6 h-6 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3">Работа в фоне</h3>
+                    <p class="text-gray-400 text-sm">
+                        Быстрое управление из системного трея и поддержка глобальных горячих клавиш Windows через WinAPI.
+                    </p>
+                </div>
+                
+                <!-- Feature 5 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.2s">
+                    <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-4">
+                        <i data-lucide="database" class="w-6 h-6 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3">Импорт и Экспорт</h3>
+                    <p class="text-gray-400 text-sm">
+                        Резервное копирование и перенос зашифрованной базы данных в один клик. Полная портативность ваших профилей.
+                    </p>
+                </div>
+                
+                <!-- Feature 6 -->
+                <div class="feature-card glass p-8 rounded-xl reveal" style="animation-delay: 0.25s">
+                    <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center mb-4">
+                        <i data-lucide="globe" class="w-6 h-6 text-[#00ADB5]"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-3">Мультиплатформенность</h3>
+                    <p class="text-gray-400 text-sm">
+                        Поддержка популярных сервисов: Telegram, Discord, Steam, а также любых веб-сайтов через встроенный браузер.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Target Audience Section -->
+    <section id="audience" class="py-20 bg-[#1A1A1E]">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                    Для кого создан <span class="neon-text">Omni</span>
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                    Универсальное решение для разных профессионалов
+                </p>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="flex flex-wrap justify-center gap-4 mb-12 reveal">
+                <button class="tab-button active" data-tab="smm">
+                    <i data-lucide="megaphone" class="w-5 h-5 inline mr-2"></i>
+                    SMM и Арбитраж
+                </button>
+                <button class="tab-button" data-tab="developers">
+                    <i data-lucide="code" class="w-5 h-5 inline mr-2"></i>
+                    Разработчики
+                </button>
+                <button class="tab-button" data-tab="gamers">
+                    <i data-lucide="gamepad-2" class="w-5 h-5 inline mr-2"></i>
+                    Геймеры
+                </button>
+            </div>
+            
+            <!-- Tab Contents -->
+            <div class="max-w-4xl mx-auto">
+                <!-- SMM Tab -->
+                <div class="tab-content active" id="tab-smm">
+                    <div class="glass p-10 rounded-2xl neon-border">
+                        <div class="flex items-start gap-6">
+                            <div class="w-16 h-16 bg-[#00ADB5] bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="megaphone" class="w-8 h-8 text-[#00ADB5]"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold mb-4">SMM-специалисты и арбитражники</h3>
+                                <p class="text-gray-400 mb-6">
+                                    Ведите десятки клиентских профилей одновременно без путаницы. Omni позволяет моментально переключаться между аккаунтами социальных сетей, рекламными кабинетами и платформами для арбитража трафика.
+                                </p>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Изолированные сессии для каждого клиента</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Защита от блокировок при работе с множеством аккаунтов</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Отслеживание статистики работы по каждому профилю</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Developers Tab -->
+                <div class="tab-content" id="tab-developers">
+                    <div class="glass p-10 rounded-2xl neon-border">
+                        <div class="flex items-start gap-6">
+                            <div class="w-16 h-16 bg-[#00ADB5] bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="code" class="w-8 h-8 text-[#00ADB5]"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold mb-4">Разработчики и IT-специалисты</h3>
+                                <p class="text-gray-400 mb-6">
+                                    Четкое разделение личной и рабочей сред, тестирование программного обеспечения под разными ролями и конфигурациями. Быстрое переключение между тестовыми окружениями.
+                                </p>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Изолированные окружения для разработки и тестирования</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Быстрая смена учетных записей API и сервисов</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Безопасное хранение токенов и авторизационных данных</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gamers Tab -->
+                <div class="tab-content" id="tab-gamers">
+                    <div class="glass p-10 rounded-2xl neon-border">
+                        <div class="flex items-start gap-6">
+                            <div class="w-16 h-16 bg-[#00ADB5] bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="gamepad-2" class="w-8 h-8 text-[#00ADB5]"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold mb-4">Геймеры и обычные пользователи</h3>
+                                <p class="text-gray-400 mb-6">
+                                    Быстрое переключение между игровыми аккаунтами Steam, Discord, Battle.net. Удобный фарм профилей и управление множественными учетными записями в играх и мессенджерах.
+                                </p>
+                                <ul class="space-y-3">
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Мгновенное переключение аккаунтов в Discord и Telegram</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Управление несколькими профилями Steam</span>
+                                    </li>
+                                    <li class="flex items-start gap-3">
+                                        <i data-lucide="check-circle" class="w-5 h-5 text-[#00ADB5] mt-0.5"></i>
+                                        <span class="text-gray-300">Изоляция личных и игровых данных</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section id="screenshots" class="py-20 bg-[#1A1A1E]">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                    Интерфейс <span class="neon-text">Omni</span>
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                    Минималистичный дизайн в стиле Cyberpunk, созданный для максимальной продуктивности.
+                </p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="reveal">
+                    <div class="neon-border rounded-xl overflow-hidden glass group cursor-pointer">
+                        <img src="screenshot/main.png" alt="Main Window" class="w-full h-auto transition duration-500 group-hover:scale-110" />
+                        <div class="p-6">
+                            <h4 class="font-bold mb-2">Главная панель</h4>
+                            <p class="text-gray-400 text-sm">Удобный список всех ваших аккаунтов с быстрой фильтрацией и поиском.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="reveal" style="animation-delay: 0.1s">
+                    <div class="neon-border rounded-xl overflow-hidden glass group cursor-pointer">
+                        <img src="screenshot/pin-code.png" alt="PIN Window" class="w-full h-auto transition duration-500 group-hover:scale-110" />
+                        <div class="p-6">
+                            <h4 class="font-bold mb-2">Защита доступа</h4>
+                            <p class="text-gray-400 text-sm">Безопасное окно ввода ПИН-кода с эффектом размытия основного интерфейса.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="reveal" style="animation-delay: 0.2s">
+                    <div class="neon-border rounded-xl overflow-hidden glass group cursor-pointer">
+                        <img src="screenshot/settings.png" alt="Settings" class="w-full h-auto transition duration-500 group-hover:scale-110" />
+                        <div class="p-6">
+                            <h4 class="font-bold mb-2">Настройка сессий</h4>
+                            <p class="text-gray-400 text-sm">Индивидуальные настройки прокси и путей для каждого профиля.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="reveal" style="animation-delay: 0.3s">
+                    <div class="neon-border rounded-xl overflow-hidden glass group cursor-pointer">
+                        <img src="screenshot/statistic.png" alt="Stats" class="w-full h-auto transition duration-500 group-hover:scale-110" />
+                        <div class="p-6">
+                            <h4 class="font-bold mb-2">Статистика</h4>
+                            <p class="text-gray-400 text-sm">Детальная аналитика использования времени по каждому аккаунту.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technologies Section -->
+    <section id="tech" class="py-20 bg-[#121214]">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">
+                    Наш <span class="neon-text">Технологический стек</span>
+                </h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+                    Omni построен на современных и надежных технологиях для обеспечения максимальной производительности.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+                <!-- Tech 1 -->
+                <div class="glass p-6 rounded-xl text-center reveal">
+                    <div class="text-[#00ADB5] mb-3 flex justify-center">
+                        <i data-lucide="code-2" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-bold text-sm">.NET 8.0</h4>
+                    <p class="text-xs text-gray-500 mt-1">Core Engine</p>
+                </div>
+                <!-- Tech 2 -->
+                <div class="glass p-6 rounded-xl text-center reveal" style="animation-delay: 0.1s">
+                    <div class="text-[#00ADB5] mb-3 flex justify-center">
+                        <i data-lucide="layout" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-bold text-sm">WPF (C#)</h4>
+                    <p class="text-xs text-gray-500 mt-1">UI Framework</p>
+                </div>
+                <!-- Tech 3 -->
+                <div class="glass p-6 rounded-xl text-center reveal" style="animation-delay: 0.2s">
+                    <div class="text-[#00ADB5] mb-3 flex justify-center">
+                        <i data-lucide="database" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-bold text-sm">SQLite</h4>
+                    <p class="text-xs text-gray-500 mt-1">Local Storage</p>
+                </div>
+                <!-- Tech 4 -->
+                <div class="glass p-6 rounded-xl text-center reveal" style="animation-delay: 0.3s">
+                    <div class="text-[#00ADB5] mb-3 flex justify-center">
+                        <i data-lucide="globe" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-bold text-sm">WebView2</h4>
+                    <p class="text-xs text-gray-500 mt-1">Chromium Engine</p>
+                </div>
+                <!-- Tech 5 -->
+                <div class="glass p-6 rounded-xl text-center reveal" style="animation-delay: 0.4s">
+                    <div class="text-[#00ADB5] mb-3 flex justify-center">
+                        <i data-lucide="shield-check" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-bold text-sm">AES-256</h4>
+                    <p class="text-xs text-gray-500 mt-1">Encryption Standards</p>
+                </div>
+                <!-- Tech 6 -->
+                <div class="glass p-6 rounded-xl text-center reveal" style="animation-delay: 0.5s">
+                    <div class="text-[#00ADB5] mb-3 flex justify-center">
+                        <i data-lucide="cpu" class="w-10 h-10"></i>
+                    </div>
+                    <h4 class="font-bold text-sm">WinAPI</h4>
+                    <p class="text-xs text-gray-500 mt-1">Native Interop</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Security Section -->
+    <section id="security" class="py-20 bg-[#1A1A1E]">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="reveal">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6">
+                        Безопасность без <span class="neon-text">компромиссов</span>
+                    </h2>
+                    <p class="text-gray-400 text-lg mb-8">
+                        Omni разработан с приоритетом на защиту ваших данных. Мы используем отраслевые стандарты шифрования и инновационные методы изоляции.
+                    </p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="lock" class="w-6 h-6 text-[#00ADB5]"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-bold">Локальное шифрование AES-256</h4>
+                                <p class="text-gray-400">Пароли прокси и заметки шифруются системными ключами пользователя (DPAPI), обеспечивая доступ только владельцу устройства.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="fingerprint" class="w-6 h-6 text-[#00ADB5]"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-bold">Защита ПИН-кодом</h4>
+                                <p class="text-gray-400">Доступ к приложению защищен 4-значным кодом. ПИН хранится исключительно в виде SHA-256 хеша.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-12 h-12 bg-[#00ADB5] bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="eye-off" class="w-6 h-6 text-[#00ADB5]"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-bold">Авто-блокировка и Blur Overlay</h4>
+                                <p class="text-gray-400">Мгновенная блокировка при сворачивании или после 5 минут бездействия. Интерфейс размывается для защиты конфиденциальности.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="relative reveal" style="animation-delay: 0.2s">
+                    <div class="neon-border rounded-2xl overflow-hidden glass p-8">
+                        <div class="flex items-center justify-between mb-8">
+                            <span class="text-sm font-semibold text-gray-500 uppercase tracking-widest">Security Protocol</span>
+                            <span class="px-3 py-1 bg-green-500 bg-opacity-20 text-green-500 text-xs rounded-full font-bold">Active</span>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-[#00ADB5] w-[95%]"></div>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-400">Encryption Level</span>
+                                <span class="text-[#00ADB5]">AES-256 bit</span>
+                            </div>
+                            
+                            <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-[#00ADB5] w-[100%]"></div>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-400">Session Isolation</span>
+                                <span class="text-[#00ADB5]">Complete (Individual UserDataFolders)</span>
+                            </div>
+                            
+                            <div class="h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-[#00ADB5] w-[90%]"></div>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-400">Privacy Protection</span>
+                                <span class="text-[#00ADB5]">Zero Data Sharing</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-8 pt-8 border-t border-gray-800 text-center">
+                            <p class="text-sm text-gray-500 italic">"Ваша безопасность — наш главный приоритет"</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Decorative element -->
+                    <div class="absolute -top-10 -right-10 w-32 h-32 bg-[#00ADB5] opacity-20 rounded-full blur-2xl"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section id="download" class="py-20 relative overflow-hidden">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute top-0 left-1/2 w-96 h-96 bg-[#00ADB5] opacity-20 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div class="container mx-auto px-4 relative z-10">
+            <div class="max-w-4xl mx-auto text-center reveal">
+                <div class="glass p-12 rounded-2xl neon-border neon-glow">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6">
+                        Готовы попробовать <span class="neon-text">Omni</span>?
+                    </h2>
+                    <p class="text-gray-400 text-lg mb-8 max-w-2xl mx-auto">
+                        Скачайте бесплатную версию для Windows и начните управлять своими аккаунтами профессионально уже сегодня.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                        <a href="#" class="btn-primary neon-glow-hover text-lg">
+                            <i data-lucide="download" class="w-6 h-6"></i>
+                            Скачать Omni v1.0 (64-bit)
+                        </a>
+                        <a href="#" class="btn-secondary text-lg">
+                            <i data-lucide="file-text" class="w-6 h-6"></i>
+                            Release Notes
+                        </a>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6 text-sm text-gray-400">
+                        <div class="flex items-center justify-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4 text-[#00ADB5]"></i>
+                            <span>Windows 10/11</span>
+                        </div>
+                        <div class="flex items-center justify-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4 text-[#00ADB5]"></i>
+                            <span>.NET 8 Runtime</span>
+                        </div>
+                        <div class="flex items-center justify-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4 text-[#00ADB5]"></i>
+                            <span>~50 MB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 bg-[#1A1A1E] border-t border-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <!-- Brand -->
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <svg class="logo-icon" viewBox="0 0 40 40">
+                            <path class="logo-lines" d="M 10 10 Q 20 5, 30 10 T 30 30 Q 20 35, 10 30 T 10 10" />
+                            <path class="logo-lines" d="M 15 15 L 25 25 M 25 15 L 15 25" />
+                            <circle class="logo-lines" cx="20" cy="20" r="3" fill="#00ADB5"/>
+                        </svg>
+                        <span class="text-xl font-bold neon-text">Omni</span>
+                    </div>
+                    <p class="text-gray-400 text-sm">
+                        Профессиональный менеджер аккаунтов для Windows
+                    </p>
+                </div>
+                
+                <!-- Links -->
+                <div>
+                    <h4 class="font-semibold mb-4 text-[#00ADB5]">Продукт</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#features" class="text-gray-400 hover:text-[#00ADB5] transition">Возможности</a></li>
+                        <li><a href="#download" class="text-gray-400 hover:text-[#00ADB5] transition">Скачать</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Changelog</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Roadmap</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4 text-[#00ADB5]">Ресурсы</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Документация</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Учебники</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">FAQ</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Поддержка</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold mb-4 text-[#00ADB5]">Сообщество</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">GitHub</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Discord</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Telegram</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-gray-400 text-sm">
+                    © 2026 Omni Project. Разработано на .NET 8 WPF.
+                </p>
+                <div class="flex gap-6 text-sm">
+                    <a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Условия использования</a>
+                    <a href="#" class="text-gray-400 hover:text-[#00ADB5] transition">Политика конфиденциальности</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+        
+        // Mobile Menu Toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('active');
+        });
+        
+        // Slider Functionality
+        const sliderTrack = document.getElementById('slider-track');
+        const sliderPrev = document.getElementById('slider-prev');
+        const sliderNext = document.getElementById('slider-next');
+        const sliderDotsContainer = document.getElementById('slider-dots');
+        
+        const slides = sliderTrack.querySelectorAll('.slider-slide');
+        const totalSlides = slides.length;
+        let currentSlide = 0;
+        let autoplayInterval;
+        
+        // Create dots
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'slider-dot';
+            if (i === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => goToSlide(i));
+            sliderDotsContainer.appendChild(dot);
+        }
+        
+        const dots = sliderDotsContainer.querySelectorAll('.slider-dot');
+        
+        function updateSlider() {
+            sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+            
+            // Update dots
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+            
+            // Reinitialize icons after slide change
+            lucide.createIcons();
+        }
+        
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            updateSlider();
+        }
+        
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            updateSlider();
+        }
+        
+        function goToSlide(index) {
+            currentSlide = index;
+            updateSlider();
+            resetAutoplay();
+        }
+        
+        function startAutoplay() {
+            autoplayInterval = setInterval(nextSlide, 5000);
+        }
+        
+        function resetAutoplay() {
+            clearInterval(autoplayInterval);
+            startAutoplay();
+        }
+        
+        sliderNext.addEventListener('click', () => {
+            nextSlide();
+            resetAutoplay();
+        });
+        
+        sliderPrev.addEventListener('click', () => {
+            prevSlide();
+            resetAutoplay();
+        });
+        
+        // Start autoplay
+        startAutoplay();
+        
+        // Pause autoplay on hover
+        const sliderContainer = document.querySelector('.slider-container');
+        sliderContainer.addEventListener('mouseenter', () => {
+            clearInterval(autoplayInterval);
+        });
+        
+        sliderContainer.addEventListener('mouseleave', () => {
+            startAutoplay();
+        });
+        
+        // Tab Functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+                
+                // Reinitialize icons
+                lucide.createIcons();
+            });
+        });
+        
+        // Scroll Reveal Animation
+        function reveal() {
+            const reveals = document.querySelectorAll('.reveal');
+            
+            reveals.forEach(element => {
+                const windowHeight = window.innerHeight;
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+                
+                if (elementTop < windowHeight - elementVisible) {
+                    element.classList.add('active');
+                }
+            });
+        }
+        
+        window.addEventListener('scroll', reveal);
+        reveal(); // Initial check
+        
+        // Smooth Scroll for Anchor Links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && href !== '#repo' && href !== '#docs') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                        
+                        // Close mobile menu if open
+                        mobileMenu.classList.remove('active');
+                    }
+                }
+            });
+        });
+        
+        // Reinitialize icons on page load
+        window.addEventListener('load', () => {
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
